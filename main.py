@@ -1,12 +1,15 @@
 import sqlite3
+import os
 from contextlib import contextmanager
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 app = FastAPI()
 
-DB_NAME = "books.db"
+# DB_NAME = "books.db"
+
+DB_NAME = os.environ.get("BOOKS_DB", "books.db")
 
 
 @contextmanager
@@ -43,16 +46,25 @@ def row_to_dict(row):
 init_db()
 
 
+# class BookCreate(BaseModel):
+#     title: str
+#     author: str
+
+
+# class BookUpdate(BaseModel):
+#     title: str | None = None
+#     author: str | None = None
+#     read: bool | None = None
+
 class BookCreate(BaseModel):
-    title: str
-    author: str
+    title: str = Field(min_length=1, max_length=200)
+    author: str = Field(min_length=1, max_length=100)
 
 
 class BookUpdate(BaseModel):
-    title: str | None = None
-    author: str | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    author: str | None = Field(default=None, min_length=1, max_length=100)
     read: bool | None = None
-
 
 # @app.get("/books")
 # def list_books():
