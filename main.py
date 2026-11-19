@@ -54,10 +54,21 @@ class BookUpdate(BaseModel):
     read: bool | None = None
 
 
+# @app.get("/books")
+# def list_books():
+#     with get_db() as conn:
+#         rows = conn.execute("SELECT * FROM books").fetchall()
+#         return [row_to_dict(row) for row in rows]
+
 @app.get("/books")
-def list_books():
+def list_books(read: bool | None = None):
     with get_db() as conn:
-        rows = conn.execute("SELECT * FROM books").fetchall()
+        if read is None:
+            rows = conn.execute("SELECT * FROM books").fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM books WHERE read = ?", (int(read),)
+            ).fetchall()
         return [row_to_dict(row) for row in rows]
 
 
