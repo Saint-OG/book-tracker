@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book Tracker</title>
+  <style>
+    body { font-family: sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; }
+    input, button { padding: 0.5rem; margin: 0.25rem 0; width: 100%; box-sizing: border-box; }
+    button { cursor: pointer; }
+    .hidden { display: none; }
+    #message { font-weight: bold; min-height: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Book Tracker</h1>
+  <p id="message"></p>
+
+  <div id="auth-section">
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password (8+ characters)">
+    <button id="login-btn">Log in</button>
+    <button id="register-btn">Register</button>
+  </div>
+
+  <div id="app-section" class="hidden">
+    <p>You are logged in.</p>
+    <button id="logout-btn">Log out</button>
+  </div>
+
+  <script>
+    const messageEl = document.getElementById("message");
+    const authSection = document.getElementById("auth-section");
+    const appSection = document.getElementById("app-section");
+
+    function showMessage(text) {
+      messageEl.textContent = text;
+    }
+
+    function getToken() {
+      return localStorage.getItem("token");
+    }
+
+    function updateView() {
+      const loggedIn = getToken() !== null;
+      authSection.classList.toggle("hidden", loggedIn);
+      appSection.classList.toggle("hidden", !loggedIn);
+    }
+
+    function errorText(data) {
+      if (typeof data.detail === "string") return data.detail;
+      if (Array.isArray(data.detail)) return data.detail.map(d => d.msg).join(", ");
+      return "Something went wrong";
+    }
+
+    async function register() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      const response = await fetch("/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage("Registered! Now log in.");
+      } else {
+        showMessage(errorText(data));
+      }
+    }
+
+    async function login() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      const response = await fetch("/login", {
+        method: "POST",
+        body: new URLSearchParams({ username, password }),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("token", data.access_token);
+        showMessage("");
+        updateView();
+      } else {
+        showMessage(errorText(data));
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      updateView();
+    }
+
+    document.getElementById("register-btn").addEventListener("click", register);
+    document.getElementById("login-btn").addEventListener("click", login);
+    document.getElementById("logout-btn").addEventListener("click", logout);
+
+    updateView();
+  </script>
+</body>
+</html>

@@ -8,6 +8,10 @@ TOKEN_EXPIRE_MINUTES = 60
 
 from datetime import datetime, timedelta, timezone
 
+from pathlib import Path
+
+from fastapi.responses import FileResponse
+
 import jwt
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -115,9 +119,9 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
         )
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 def home():
-    return {"message": "Book Tracker API. See /docs for the interactive documentation."}
+    return FileResponse(Path(__file__).parent / "index.html")
 
 @app.post("/register", status_code=201)
 def register(user: UserCreate):
