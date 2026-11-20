@@ -115,6 +115,10 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
         )
 
 
+@app.get("/")
+def home():
+    return {"message": "Book Tracker API. See /docs for the interactive documentation."}
+
 @app.post("/register", status_code=201)
 def register(user: UserCreate):
     hashed = password_hash.hash(user.password)
