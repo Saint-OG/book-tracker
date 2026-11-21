@@ -10,6 +10,9 @@
     button { cursor: pointer; }
     .hidden { display: none; }
     #message { font-weight: bold; min-height: 1.5rem; }
+    #book-list { padding-left: 1.2rem; }
+    #book-list li { margin: 0.5rem 0; }
+    #book-list button { width: auto; margin-left: 0.5rem; padding: 0.25rem 0.5rem; }
   </style>
 </head>
 <body>
@@ -24,9 +27,16 @@
   </div>
 
   <div id="app-section" class="hidden">
-    <p>You are logged in.</p>
-    <button id="logout-btn">Log out</button>
-  </div>
+  <button id="logout-btn">Log out</button>
+
+  <h2>Add a book</h2>
+  <input id="title" placeholder="Title">
+  <input id="author" placeholder="Author">
+  <button id="add-btn">Add book</button>
+
+  <h2>My books</h2>
+  <ul id="book-list"></ul>
+</div>
 
   <script>
     const messageEl = document.getElementById("message");
@@ -42,9 +52,12 @@
     }
 
     function updateView() {
-      const loggedIn = getToken() !== null;
-      authSection.classList.toggle("hidden", loggedIn);
-      appSection.classList.toggle("hidden", !loggedIn);
+  const loggedIn = getToken() !== null;
+  authSection.classList.toggle("hidden", loggedIn);
+  appSection.classList.toggle("hidden", !loggedIn);
+  if (loggedIn) {
+    loadBooks();
+  }
     }
 
     function errorText(data) {
@@ -95,9 +108,110 @@
       updateView();
     }
 
+async function authFetch(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: "Bearer " + getToken(),
+    },
+  });
+  if (response.status === 401) {
+    logout();
+    showMessage("Session expired. Please log in again.");
+  }
+  return response;
+}
+
+async function loadBooks() {
+  const response = await authFetch("/books");
+  if (!response.ok) return;
+  const books = await response.json();
+
+  const list = document.getElementById("book-list");
+  list.replaceChildren();
+
+  if (books.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "No books yet.";
+    list.appendChild(li);
+    return;
+  }
+
+  for (const book of books) {
+    const li = document.createElement("li");
+    li.textContent = book.title + " by " + book.author + (book.read ? " (read)" : "");
+
+    const readBtn = document.createElement("button");
+    readBtn.textContent = book.read ? "Mark unread" : "Mark read";
+    readBtn.addEventListener("click", () => toggleRead(book.id, !book.read));
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => deleteBook(book.id));
+
+    li.appendChild(readBtn);
+    li.appendChild(deleteBtn);
+    list.appendChild(li);
+  }
+}
+
+async function addBook() {
+  const title = document.getElementById("title").value;
+  const author = document.getElementById("author").value;
+
+  const response = await authFetch("/books", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, author }),
+  });
+  if (response.status === 401) return;
+
+  if (response.ok) {
+    document.getElementById("title").value = "";
+    document.getElementById("author").value = "";
+    showMessage("");
+    loadBooks();
+  } else {
+    const data = await response.json();
+    showMessage(errorText(data));
+  }
+}
+
+async function toggleRead(id, newValue) {
+  const response = await authFetch("/books/" + id, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ read: newValue }),
+  });
+  if (response.status === 401) return;
+
+  if (response.ok) {
+    loadBooks();
+  } else {
+    const data = await response.json();
+    showMessage(errorText(data));
+  }
+}
+
+async function deleteBook(id) {
+  if (!confirm("Delete this book?")) return;
+
+  const response = await authFetch("/books/" + id, { method: "DELETE" });
+  if (response.status === 401) return;
+
+  if (response.ok) {
+    loadBooks();
+  } else {
+    const data = await response.json();
+    showMessage(errorText(data));
+  }
+}
+
     document.getElementById("register-btn").addEventListener("click", register);
     document.getElementById("login-btn").addEventListener("click", login);
     document.getElementById("logout-btn").addEventListener("click", logout);
+    document.getElementById("add-btn").addEventListener("click", addBook);
 
     updateView();
   </script>
